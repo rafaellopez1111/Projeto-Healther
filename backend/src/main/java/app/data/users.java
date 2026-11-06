@@ -1,4 +1,4 @@
-package backend.app.data;
+package app.data;
 
 public class users {
     
