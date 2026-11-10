@@ -1,2 +1,2 @@
-public class RecipeRepository {
+public interface RecipeRepository {
 }

@@ -1,2 +1,2 @@
-public class ExerciseRepository {
+public interface ExerciseRepository {
 }

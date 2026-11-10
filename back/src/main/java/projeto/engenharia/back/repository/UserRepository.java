@@ -1,2 +1,2 @@
-public class UserRepository {
+public interface UserRepository {
 }

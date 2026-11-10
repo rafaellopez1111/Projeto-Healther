@@ -1,2 +1,2 @@
-public class FoodRepository {
+public interface FoodRepository {
 }
