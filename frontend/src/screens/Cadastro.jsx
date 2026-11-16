@@ -15,14 +15,13 @@ export default function Cadastro({ onDone, onLogin }) {
     if (senha.length < 8) return setErro('A senha precisa ter no mínimo 8 caracteres.');
     setErro(''); setBusy(true);
     try { onDone(await api.cadastro(nome, email, senha)); }
-    catch (error) { setErro(error.message || 'Não foi possível criar a conta. Tente de novo.'); setBusy(false); }
+    catch (err) { setErro(err.message); setBusy(false); }
   }
 
   return (
     <main className="auth rev">
       <form className="pane" onSubmit={enviar} noValidate>
         <div><div className="lbl acc">Criar conta</div><h2 className="d">Comece em um minuto</h2></div>
-        {api.isDemoMode && <p className="demo-note">Modo de demonstração: os dados da conta valem apenas nesta sessão.</p>}
         <Field id="nome" label="Nome" value={nome} onChange={(e) => setNome(e.target.value)} autoComplete="name" />
         <Field id="email" label="E-mail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
         <div>
@@ -36,10 +35,11 @@ export default function Cadastro({ onDone, onLogin }) {
       <section className="side">
         <div className="logo d" style={{ textAlign: 'right' }}>healther.</div>
         <div>
-          <h1 className="d" style={{ marginBottom: 40 }}>Crie seu acesso ao Healther.</h1>
-          <p className="ft">Sua rotina de saúde começa aqui</p>
+          <h1 className="d" style={{ marginBottom: 40 }}>Tudo o que você come e treina, em uma tela.</h1>
+          <p className="ft">Registre as suas refeições</p>
+          <p className="ft">Anote os exercícios do dia</p>
+          <p className="ft">Salve e escolha receitas</p>
         </div>
-        <p className="lbl" style={{ color: 'inherit', margin: 0 }}>Entre para começar.</p>
       </section>
     </main>
   );
