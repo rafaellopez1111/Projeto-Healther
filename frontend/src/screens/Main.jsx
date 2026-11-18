@@ -29,6 +29,10 @@ export default function Main({ user, onLogout }) {
   const [ref, setRef] = useState([]);
   const [ex, setEx] = useState([]);
   const [rec, setRec] = useState([]);
+  const [sugeridas, setSugeridas] = useState([]);
+  const [sugeridasCarregadas, setSugeridasCarregadas] = useState(false);
+  const [carregandoSugeridas, setCarregandoSugeridas] = useState(false);
+  const [erroSugeridas, setErroSugeridas] = useState('');
   const [resumo, setResumo] = useState(null);
   const [form, setForm] = useState(null);
   const [preset, setPreset] = useState({});
@@ -59,6 +63,27 @@ export default function Main({ user, onLogout }) {
   }, [iso]);
 
   useEffect(() => { carregarResumo(); }, [carregarResumo]);
+
+  useEffect(() => {
+    if (tab !== 'sugerida' || sugeridasCarregadas) return;
+    let ativa = true;
+    setCarregandoSugeridas(true);
+    setErroSugeridas('');
+    api.listSuggestedRecipes()
+      .then((data) => {
+        if (ativa) {
+          setSugeridas(data);
+          setSugeridasCarregadas(true);
+        }
+      })
+      .catch((e) => {
+        if (ativa) setErroSugeridas(e.message);
+      })
+      .finally(() => {
+        if (ativa) setCarregandoSugeridas(false);
+      });
+    return () => { ativa = false; };
+  }, [tab, sugeridasCarregadas]);
 
   const abrir = (qual, p = {}) => {
     setForm(qual); setPreset(p);
@@ -168,8 +193,12 @@ export default function Main({ user, onLogout }) {
             ))}
           </div>
           {form === 'rec' && <AddForm fields={[{ name: 'nome', label: 'Nome da receita' }, { name: 'kcal', label: 'Calorias por porção', type: 'number' }, { name: 'steps', label: 'Modo de preparo' }]} submitLabel="Salvar receita" onSubmit={addRec} onCancel={() => setForm(null)} />}
-          {(tab === 'minha' ? rec : api.SUGERIDAS).length === 0 && <Vazio>Você ainda não criou receitas. Toque em + Nova.</Vazio>}
-          {(tab === 'minha' ? rec : api.SUGERIDAS).map((r) => (
+          {tab === 'sugerida' && erroSugeridas && <p className="err" role="alert">{erroSugeridas}</p>}
+          {tab === 'sugerida' && carregandoSugeridas && <Vazio>Carregando receitas sugeridas…</Vazio>}
+          {!carregandoSugeridas && !erroSugeridas && (tab === 'minha' ? rec : sugeridas).length === 0 && (
+            <Vazio>{tab === 'minha' ? 'Você ainda não criou receitas. Toque em + Nova.' : 'Nenhuma receita sugerida disponível.'}</Vazio>
+          )}
+          {(tab === 'minha' ? rec : sugeridas).map((r) => (
             <div className="row" key={r.id}>
               <div><b>{r.nome}</b><small><span className="teal">{r.kcal} kcal</span> por porção</small></div>
               <div className="rr">

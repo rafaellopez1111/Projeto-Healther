@@ -111,13 +111,30 @@ export async function listRecipes() {
     steps: pick(x, 'recipe_steps', 'recipeSteps'),
   }));
 }
+export async function listSuggestedRecipes() {
+  const r = await call('recipe_suggested_getall');
+  if (!Array.isArray(r.data)) {
+    throw new Error('A lista de receitas sugeridas recebida pelo servidor é inválida.');
+  }
+  return r.data.map((recipe, index) => {
+    const id = pick(recipe, 'recipe_id', 'recipeId', 'id');
+    const nome = pick(recipe, 'recipe_name', 'recipeName', 'nome', 'name');
+    const kcalValue = pick(recipe, 'calories_portion', 'caloriesPortion', 'kcal');
+    const kcal = Number(kcalValue);
+
+    if (
+      (typeof id !== 'string' && typeof id !== 'number') ||
+      typeof nome !== 'string' ||
+      !nome.trim() ||
+      (typeof kcalValue !== 'number' && typeof kcalValue !== 'string') ||
+      String(kcalValue).trim() === '' ||
+      !Number.isFinite(kcal)
+    ) {
+      throw new Error(`A receita sugerida ${index + 1} recebida pelo servidor é inválida.`);
+    }
+    return { id: String(id), nome, kcal };
+  });
+}
 export const addRecipe = ({ nome, kcal, steps }) =>
   call('recipe_create', { recipe_name: nome, calories_portion: Number(kcal), recipe_steps: steps, created_by: sess.nome });
 export const removeRecipe = (id) => call('recipe_delete', { recipe_id: id });
-
-/* exemplos fixos, falta conexao com json */
-export const SUGERIDAS = [
-  { id: 's1', nome: 'Salada de grão-de-bico', kcal: 310 },
-  { id: 's2', nome: 'Crepioca com queijo', kcal: 260 },
-  { id: 's3', nome: 'Sopa de legumes', kcal: 180 },
-];
