@@ -78,6 +78,25 @@ export async function listExercises(date) {
     kcal: pick(e, 'total_calories', 'totalCalories'),
   }));
 }
+export async function getNutritionSummary(date) {
+  const r = await call('dashboard_summary', { reference_date: date });
+  const summary = r.data;
+  const isNumber = (value) => typeof value === 'number' && Number.isFinite(value);
+  const hasMacro = (macro) => isNumber(macro?.consumed) && isNumber(macro?.target);
+
+  if (
+    !isNumber(summary?.consumed_calories) ||
+    !isNumber(summary?.burned_calories) ||
+    !isNumber(summary?.goal_calories) ||
+    !isNumber(summary?.remaining_calories) ||
+    !hasMacro(summary?.macros?.protein) ||
+    !hasMacro(summary?.macros?.carbohydrate) ||
+    !hasMacro(summary?.macros?.fat)
+  ) {
+    throw new Error('O resumo nutricional recebido pelo servidor está incompleto.');
+  }
+  return summary;
+}
 export const addExercise = ({ nome, min, kcal, date }) =>
   call('exercise_create', { exercise_name: nome, total_minutes: Number(min), total_calories: Number(kcal), exercise_date: date });
 export const removeExercise = (id) => call('exercise_delete', { exercise_id: id });

@@ -26,15 +26,16 @@ function AddForm({ fields, initial, submitLabel, onSubmit, onCancel }) {
 const Vazio = ({ children }) => <p className="mut vazio">{children}</p>;
 
 export default function Main({ user, onLogout }) {
-  const meta = 2100;
   const [ref, setRef] = useState([]);
   const [ex, setEx] = useState([]);
   const [rec, setRec] = useState([]);
+  const [resumo, setResumo] = useState(null);
   const [form, setForm] = useState(null);
   const [preset, setPreset] = useState({});
   const [tab, setTab] = useState('minha');
   const [dia, setDia] = useState(0);
   const [erro, setErro] = useState('');
+  const [erroResumo, setErroResumo] = useState('');
 
   const d = hoje(dia);
   const iso = d.toLocaleDateString('sv-SE');
@@ -47,6 +48,18 @@ export default function Main({ user, onLogout }) {
 
   useEffect(() => { carregar().catch((e) => setErro(e.message)); }, [carregar]);
 
+  const carregarResumo = useCallback(async () => {
+    setResumo(null);
+    try {
+      setResumo(await api.getNutritionSummary(iso));
+      setErroResumo('');
+    } catch (e) {
+      setErroResumo(e.message);
+    }
+  }, [iso]);
+
+  useEffect(() => { carregarResumo(); }, [carregarResumo]);
+
   const abrir = (qual, p = {}) => {
     setForm(qual); setPreset(p);
     if (qual === 'ref') document.getElementById('h-ref')?.scrollIntoView({ behavior: 'smooth' });
@@ -55,6 +68,7 @@ export default function Main({ user, onLogout }) {
   const agir = (fn) => async (...args) => {
     try { setErro(''); await fn(...args); await carregar(); setForm(null); }
     catch (e) { setErro(e.message); }
+    await carregarResumo();
   };
   const addRef = agir((v) => api.addMeal({ ...v, date: iso }));
   const addEx = agir((v) => api.addExercise({ ...v, date: iso }));
@@ -75,21 +89,46 @@ export default function Main({ user, onLogout }) {
         <div className="who"><span className="lbl">Olá, {user?.nome}</span><button className="lk" onClick={onLogout}>Sair</button></div>
       </header>
       {erro && <p className="err banner" role="alert">{erro}</p>}
+      {erroResumo && <p className="err banner" role="alert">{erroResumo}</p>}
 
       <section className="hero">
         <div>
           <div className="lbl dk">Consumidas hoje</div>
-          <h1 className="big d">1.480</h1>
+          <h1 className="big d">{resumo ? resumo.consumed_calories.toLocaleString('pt-BR') : '—'}</h1>
           <div className="metaline">
-            <div className="d" style={{ fontSize: 24, fontWeight: 500 }}>de {meta.toLocaleString('pt-BR')} kcal de meta</div>
+            <div className="d" style={{ fontSize: 24, fontWeight: 500 }}>
+              de {resumo ? resumo.goal_calories.toLocaleString('pt-BR') : '—'} kcal de meta
+            </div>
           </div>
         </div>
         <div>
-          <div className="st"><span className="lbl dk">Queimadas</span><span className="d">340</span></div>
-          <div className="st"><span className="lbl dk">Restam</span><span className="d">960</span></div>
-          {[['Proteína', '82 / 140 g', 58], ['Carboidrato', '160 / 230 g', 70], ['Gordura', '48 / 70 g', 68]].map(([n, t, p]) => (
-            <div className="mb" key={n}><div className="lbl dk"><span>{n}</span><span>{t}</span></div><div className="t"><i style={{ width: p + '%' }} /></div></div>
-          ))}
+          <div className="st">
+            <span className="lbl dk">Queimadas</span>
+            <span className="d">{resumo ? resumo.burned_calories.toLocaleString('pt-BR') : '—'}</span>
+          </div>
+          <div className="st">
+            <span className="lbl dk">Restam</span>
+            <span className="d">{resumo ? resumo.remaining_calories.toLocaleString('pt-BR') : '—'}</span>
+          </div>
+          {[
+            ['Proteína', 'protein'],
+            ['Carboidrato', 'carbohydrate'],
+            ['Gordura', 'fat'],
+          ].map(([nome, key]) => {
+            const macro = resumo?.macros[key];
+            const percentual = macro && macro.target > 0
+              ? Math.min(100, (macro.consumed / macro.target) * 100)
+              : 0;
+            const valores = macro
+              ? `${macro.consumed} / ${macro.target} g`
+              : '— / — g';
+            return (
+              <div className="mb" key={key}>
+                <div className="lbl dk"><span>{nome}</span><span>{valores}</span></div>
+                <div className="t"><i style={{ width: `${percentual}%` }} /></div>
+              </div>
+            );
+          })}
         </div>
       </section>
 
