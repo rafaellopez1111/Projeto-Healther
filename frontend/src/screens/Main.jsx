@@ -140,7 +140,7 @@ export default function Main({ user, onLogout }) {
             ['Carboidrato', 'carbohydrate'],
             ['Gordura', 'fat'],
           ].map(([nome, key]) => {
-            const macro = resumo?.macros[key];
+            const macro = resumo?.macros?.[key];
             const percentual = macro && macro.target > 0
               ? Math.min(100, (macro.consumed / macro.target) * 100)
               : 0;

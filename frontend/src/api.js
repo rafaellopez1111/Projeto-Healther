@@ -1,4 +1,4 @@
-// Cliente do backend Java: tudo vai em POST {BASE}/api com { action, userid, data }.
+// Cliente do backend Java: tudo vai em POST {BASE}/api com { action, token, data }.
 const BASE = (import.meta.env?.VITE_API_URL || 'http://localhost:8080').replace(/\/$/, '');
 
 const MSG = {
@@ -9,15 +9,15 @@ const MSG = {
   'User not found': 'Usuário não encontrado. Entre de novo.',
 };
 
-let sess = { id: 0, nome: '' };
+let sess = { id: 0, nome: '', token: '' };
 
-async function call(action, data = {}, userid = sess.id) {
+async function call(action, data = {}, token = sess.token) {
   let r;
   try {
     const res = await fetch(`${BASE}/api`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, userid, data }),
+      body: JSON.stringify({ action, token: token || undefined, data }),
     });
     r = await res.json().catch(() => ({ success: false }));
   } catch {
@@ -31,16 +31,16 @@ const pick = (o, ...keys) => { for (const k of keys) if (o?.[k] !== undefined) r
 
 /* conta */
 export async function login(email, senha) {
-  const r = await call('user_login', { user_email: email.trim().toLowerCase(), user_password: senha }, 0);
-  sess = { id: r.user_id, nome: r.user_name };
+  const r = await call('user_login', { user_email: email.trim().toLowerCase(), user_password: senha }, null);
+  sess = { id: r.user_id, nome: r.user_name, token: r.token };
   return { id: r.user_id, nome: r.user_name, goal: r.user_goal };
 }
 export async function cadastro(nome, email, senha) {
-  const r = await call('user_create', { user_name: nome.trim(), user_email: email.trim().toLowerCase(), user_password: senha }, 0);
-  sess = { id: r.user_id, nome: nome.trim() };
-  return { id: r.user_id, nome: sess.nome };
+  const r = await call('user_create', { user_name: nome.trim(), user_email: email.trim().toLowerCase(), user_password: senha }, null);
+  sess = { id: r.user_id, nome: r.user_name || nome.trim(), token: r.token };
+  return { id: r.user_id, nome: sess.nome, goal: r.user_goal };
 }
-export const logout = () => { sess = { id: 0, nome: '' }; };
+export const logout = () => { sess = { id: 0, nome: '', token: '' }; };
 export const saveProfile = ({ goal, age, weight }) => call('user_update', { user_goal: goal, user_age: age, user_weight: weight });
 
 /* refeições */
@@ -82,16 +82,12 @@ export async function getNutritionSummary(date) {
   const r = await call('dashboard_summary', { reference_date: date });
   const summary = r.data;
   const isNumber = (value) => typeof value === 'number' && Number.isFinite(value);
-  const hasMacro = (macro) => isNumber(macro?.consumed) && isNumber(macro?.target);
 
   if (
     !isNumber(summary?.consumed_calories) ||
     !isNumber(summary?.burned_calories) ||
     !isNumber(summary?.goal_calories) ||
-    !isNumber(summary?.remaining_calories) ||
-    !hasMacro(summary?.macros?.protein) ||
-    !hasMacro(summary?.macros?.carbohydrate) ||
-    !hasMacro(summary?.macros?.fat)
+    !isNumber(summary?.remaining_calories)
   ) {
     throw new Error('O resumo nutricional recebido pelo servidor está incompleto.');
   }
